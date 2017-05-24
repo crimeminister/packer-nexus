@@ -1,0 +1,111 @@
+#http://download.sonatype.com/nexus/3/latest-unix.tar.gz
+
+- hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: Create a started container
+      lxd_container:
+        name: nexus
+        state: started
+        source:
+          type: image
+          mode: pull
+          server: https://images.linuxcontainers.org
+          protocol: lxd
+          alias: ubuntu/yakkety/amd64
+        profiles: ["default"]
+        wait_for_ipv4_addresses: true
+        timeout: 600
+
+    # - name: check python is installed in container
+    #   delegate_to: nexus
+    #   raw: dpkg -s python
+    #   register: python_install_check
+    #   failed_when: python_install_check.rc not in [0, 1]
+    #   changed_when: false
+
+    # - name: install python in container
+    #   delegate_to: nexus
+    #   raw: apt-get install -y python
+    #   when: python_install_check.rc == 1
+
+    - name: update repositories cache
+      delegate_to: nexus
+      apt:
+        update_cache: yes
+
+    - name: install "python" package
+       delegate_to: nexus
+       apt:
+         name: python
+         state: present
+
+    - name: install "default-jre-headless" package
+      delegate_to: nexus
+      apt:
+        name: default-jre-headless
+        state: present
+
+    - name: install "nginx" package
+      delegate_to: nexus
+      apt:
+        name: nginx
+        state: present
+
+    # push etc/nginx/nginx.conf to nexus/etc/nginx/nginx.conf
+    # push etc/nginx/sites-available/default to nexus/etc/nginx/sites-available/default
+
+    # fetch tarball
+    # push tarball into nexus/tmp
+    # expand and move nexus-* and sonatype-work/ into /opt/
+    # create a "nexus" symlink /opt/nexus
+    # Create a "nexus" user with sufficient rights to run the service. Just use "ubuntu?"
+    # chown -R ubuntu:ubuntu /opt/sonatype-work
+    # (If we relocate sonatype-work-to where?-update config file)
+    # Set NEXUS_HOME to absolute location, e.g. in .bashrc: NEXUS_HOME="/opt/nexus"
+    # In bin/nexus.rc set: run_as_user="nexus"
+
+    # Run as: /opt/nexus $ ./bin/nexus run
+
+    # NB: default username/password: admin/admin123 (update!)
+
+    # TODO install nginx and configure it to proxy Nexus
+
+    # Run nexus on container start (install systemd init file):
+    #
+    # - check that the User value in .service matches created nexus user
+    # - push nexus.service to nexus/etc/systemd/system/ directory
+    # - systemctl daemon-reload
+    # - systemctl enable nexus.service
+    # - systemctl start nexus.service
+
+    # Remove nuget repositories
+
+    # Set up clojars repositories:
+    #
+    # https://books.sonatype.com/nexus-book/reference/leiningen.html
+    #
+    # If you want use Nexus with Leiningen, first create two new Maven 2
+    # proxy repositories in Nexus with the remote URL
+    # http://clojars.org/repo/. One of these should have the Repository
+    # Policy set to Release and the other should have policy
+    # Snapshot.
+
+    # Then add both to your Maven 2 public group? Prefer creating a
+    # "clojars-public" group and adding all clojars-* repositories to
+    # it; add it in Leiningen :mirrors like so:
+    #
+    # :mirrors [["central" {:name "nexus-central"
+    #                       :url "http://nexus3.dev.nm.cbc.ca:8081/repository/maven-public/"
+    #                       :repo-manager true}]
+    #           [#"clojars" {:name "nexus-clojars"
+    #                        :url "http://nexus3.dev.nm.cbc.ca:8081/repository/clojars-public/"
+    #                        :repo-manager true}]]
+    #
+    # Also add a Maven 2 Hosted "clojars-hosted" repository for
+    # publishing artifacts to. Allow redeploy?
+
+    # Display message offering to add an /etc/hosts entry for the IP
+    # address of the container; ask for the hostname to use,
+    # e.g. nexus3.dev.
